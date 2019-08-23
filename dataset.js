@@ -1,4 +1,4 @@
-const dataset = [
+window.dataset = [
     [
         1195,
         348
