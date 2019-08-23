@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+
+<style>
+    html, body {
+        height: 98%;
+    }
+</style>
+
+<meta charset="utf-8">
+
+<title>DBSCAN visualization</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.9.0/p5.js"></script>
+
+<script src="/dataset.js"></script>
+
+<script>
+    let isDrawingDataset = true
+    const step = 10
+    let iteratorRaw = iterateRaw()
+    let iteratorDbscan = dbscan(10, 5)
+
+    function setup() {
+        createCanvas(document.body.clientWidth, document.body.clientHeight)
+    }
+
+    function p(i, size) {
+        circle(dataset[i][0], dataset[i][1], size || 4)
+    }
+
+    function draw() {
+        if (isDrawingDataset) {
+            fill(0)
+
+            for (let i = 0; i < step; i++) {
+                const ret = iteratorRaw.next()
+
+                if (ret.done) {
+                    isDrawingDataset = false
+                    break
+                }
+
+                p(ret.value)
+            }
+        } else {
+            fill(0, 255, 0)
+            stroke(0, 255, 0)
+
+            for (let i = 0; i < step; i++) {
+                const ret = iteratorDbscan.next()
+
+                if (ret.done) {
+                    alert('Done!')
+                    noLoop()
+                    break
+                }
+
+                p(ret.value)
+            }
+        }
+    }
+
+    function* iterateRaw() {
+        for (let i = 0; i < dataset.length; i++) {
+            yield i
+        }
+    }
+
+    function* dbscan(eps, minPts) {
+        function distance(i, j) {
+            var a = dataset[i][0] - dataset[j][0];
+            var b = dataset[i][1] - dataset[j][1];
+
+            return Math.sqrt(a*a + b*b);
+        }
+
+        const labels = []
+
+        for (let i = 0; i < dataset.length; i++) {
+            labels.push(0)
+        }
+
+        let currentCluster = 0
+
+        for (let i = 0; i < dataset.length; i++) {
+            if (labels[i] !== 0) {
+                continue
+            }
+
+            const closePoints = []
+
+            for (let j = 0; j < dataset.length; j++) {
+                if (i !== j && distance(i, j) <= eps) {
+                    closePoints.push(j)
+                }
+            }
+
+            if (closePoints.length >= minPts) {
+                currentCluster += 1
+                labels[i] = currentCluster
+                yield i
+
+                while (closePoints.length > 0) {
+                    const j = closePoints.pop()
+
+                    if (labels[j] === -1) {
+                        labels[j] = currentCluster
+                        yield j
+                    } else if (labels[j] === 0) {
+                        labels[j] = currentCluster
+                        yield j
+
+                        const tempClosePoints = []
+
+                        for (let k = 0; k < dataset.length; k++) {
+                            if (j !== k && distance(j, k) <= eps) {
+                                tempClosePoints.push(k)
+                            }
+                        }
+
+                        if (tempClosePoints.length >= minPts) {
+                            for (let k = 0; k < dataset.length; k++) {
+                                closePoints.push(tempClosePoints[k])
+                            }
+                        }
+                    }
+                }
+            } else {
+                labels[i] = -1
+            }
+        }
+
+        return labels
+    }
+</script>
